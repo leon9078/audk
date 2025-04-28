@@ -348,7 +348,8 @@ ParseAcpiFadt (
     Trace = ProcessTableReportOptions (
               FacsSignature,
               FirmwareCtrlPtr,
-              FacsLength
+              FacsLength,
+              0
               );
 
     Status = GetParser (FacsSignature, &FacsParserProc);

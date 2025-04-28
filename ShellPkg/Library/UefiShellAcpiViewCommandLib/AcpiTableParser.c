@@ -187,6 +187,7 @@ ProcessAcpiTable (
   CONST UINT32           *AcpiTableSignature;
   CONST UINT32           *AcpiTableLength;
   CONST UINT8            *AcpiTableRevision;
+  CONST UINT64           *AcpiTableOemTableId;
   CONST UINT8            *SignaturePtr;
   PARSE_ACPI_TABLE_PROC  ParserProc;
 
@@ -194,13 +195,15 @@ ProcessAcpiTable (
     Ptr,
     &AcpiTableSignature,
     &AcpiTableLength,
-    &AcpiTableRevision
+    &AcpiTableRevision,
+    &AcpiTableOemTableId
     );
 
   Trace = ProcessTableReportOptions (
             *AcpiTableSignature,
             Ptr,
-            *AcpiTableLength
+            *AcpiTableLength,
+            *AcpiTableOemTableId
             );
 
   if (Trace) {

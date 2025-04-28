@@ -78,6 +78,7 @@ ParseAcpiXsdt (
       CONST UINT32  *Signature;
       CONST UINT32  *Length;
       CONST UINT8   *Revision;
+      CONST UINT64  *OemTableId;
 
       if ((UINT64 *)(UINTN)(*TablePointer) != NULL) {
         UINT8  *SignaturePtr;
@@ -86,7 +87,8 @@ ParseAcpiXsdt (
           (UINT8 *)(UINTN)(*TablePointer),
           &Signature,
           &Length,
-          &Revision
+          &Revision,
+          &OemTableId
           );
 
         SignaturePtr = (UINT8 *)Signature;

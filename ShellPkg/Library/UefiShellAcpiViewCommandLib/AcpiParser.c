@@ -899,13 +899,14 @@ DumpAcpiHeader (
 /**
   This function parses the ACPI header as described by the AcpiHeaderParser.
 
-  This function optionally returns the signature, length and revision of the
+  This function optionally returns the Signature, Length, Revision and Oem Table ID of the
   ACPI table.
 
-  @param [in]  Ptr        Pointer to the start of the buffer.
-  @param [out] Signature  Gets location of the ACPI table signature.
-  @param [out] Length     Gets location of the length of the ACPI table.
-  @param [out] Revision   Gets location of the revision of the ACPI table.
+  @param [in]  Ptr         Pointer to the start of the buffer.
+  @param [out] Signature   Gets location of the ACPI table Signature.
+  @param [out] Length      Gets location of the ACPI table Length.
+  @param [out] Revision    Gets location of the ACPI table Revision.
+  @param [out] OemTableId  Gets location of the ACPI table Oem Table ID.
 
   @retval Number of bytes parsed.
 **/
@@ -915,7 +916,8 @@ ParseAcpiHeader (
   IN  UINT8         *Ptr,
   OUT CONST UINT32  **Signature,
   OUT CONST UINT32  **Length,
-  OUT CONST UINT8   **Revision
+  OUT CONST UINT8   **Revision,
+  OUT CONST UINT64  **OemTableId
   )
 {
   UINT32  BytesParsed;
@@ -929,9 +931,10 @@ ParseAcpiHeader (
                   PARSER_PARAMS (AcpiHeaderParser)
                   );
 
-  *Signature = AcpiHdrInfo.Signature;
-  *Length    = AcpiHdrInfo.Length;
-  *Revision  = AcpiHdrInfo.Revision;
+  *Signature  = AcpiHdrInfo.Signature;
+  *Length     = AcpiHdrInfo.Length;
+  *Revision   = AcpiHdrInfo.Revision;
+  *OemTableId = AcpiHdrInfo.OemTableId;
 
   return BytesParsed;
 }

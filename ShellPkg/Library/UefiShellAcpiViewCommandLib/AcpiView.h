@@ -62,9 +62,10 @@ GetWarningCount (
 /**
   This function processes the table reporting options for the ACPI table.
 
-  @param [in] Signature The ACPI table Signature.
-  @param [in] TablePtr  Pointer to the ACPI table data.
-  @param [in] Length    The length of the ACPI table.
+  @param [in] Signature   The ACPI table Signature.
+  @param [in] TablePtr    Pointer to the ACPI table data.
+  @param [in] Length      The ACPI table Length.
+  @param [in] OemTableId  The ACPI table Oem Table ID.
 
   @retval Returns TRUE if the ACPI table should be traced.
 **/
@@ -72,7 +73,8 @@ BOOLEAN
 ProcessTableReportOptions (
   IN CONST UINT32  Signature,
   IN CONST UINT8   *TablePtr,
-  IN CONST UINT32  Length
+  IN CONST UINT32  Length,
+  IN CONST UINT64  OemTableId
   );
 
 /**

@@ -14,6 +14,7 @@
 #include <Library/UefiLib.h>
 #include <Library/ShellLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -33,8 +34,9 @@ STATIC UINT32  mBinTableCount;
 /**
   This function dumps the ACPI table to a file.
 
-  @param [in] Ptr       Pointer to the ACPI table data.
-  @param [in] Length    The length of the ACPI table.
+  @param [in] Ptr         Pointer to the ACPI table data.
+  @param [in] Length      The ACPI table Length.
+  @param [in] OemTableId  The ACPI table Oem Table ID.
 
   @retval TRUE          Success.
   @retval FALSE         Failure.
@@ -42,8 +44,9 @@ STATIC UINT32  mBinTableCount;
 STATIC
 BOOLEAN
 DumpAcpiTableToFile (
-  IN CONST UINT8  *Ptr,
-  IN CONST UINTN  Length
+  IN CONST UINT8   *Ptr,
+  IN CONST UINTN   Length,
+  IN CONST UINT64  OemTableId
   )
 {
   CHAR16               FileNameBuffer[MAX_FILE_NAME_LEN];
@@ -54,13 +57,44 @@ DumpAcpiTableToFile (
 
   UnicodeSPrint (
     FileNameBuffer,
-    sizeof (FileNameBuffer),
-    L".\\%s%04d.bin",
-    SelectedTable->Name,
-    mBinTableCount++
+    StrSize (FileNameBuffer),
+    L".\\%c%c%c%c",
+    CharToUpper (SelectedTable->Name[0]),
+    CharToUpper (SelectedTable->Name[1]),
+    CharToUpper (SelectedTable->Name[2]),
+    CharToUpper (SelectedTable->Name[3])
     );
 
-  Print (L"Dumping ACPI table to : %s ... ", FileNameBuffer);
+  if (SelectedTable->Type == EFI_ACPI_6_2_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
+    CHAR16  SsdtFileNameBuffer[12];
+    UINT8   *OemTableIdPtr;
+    OemTableIdPtr = (UINT8 *)(UINTN)&OemTableId;
+
+    UnicodeSPrint (
+      SsdtFileNameBuffer,
+      StrSize (SsdtFileNameBuffer),
+      L"-%02u-%c%c%c%c%c%c%c%c",
+      ++mBinTableCount,
+      OemTableIdPtr[0],
+      OemTableIdPtr[1],
+      OemTableIdPtr[2],
+      OemTableIdPtr[3],
+      OemTableIdPtr[4],
+      OemTableIdPtr[5],
+      OemTableIdPtr[6],
+      OemTableIdPtr[7]
+      );
+
+    while ((SsdtFileNameBuffer)[StrLen (SsdtFileNameBuffer) - 1] == L' ') {
+      (SsdtFileNameBuffer)[StrLen (SsdtFileNameBuffer) - 1] = CHAR_NULL;
+    }
+
+    StrCatS (FileNameBuffer, MAX_FILE_NAME_LEN, SsdtFileNameBuffer);
+  }
+
+  StrCatS (FileNameBuffer, MAX_FILE_NAME_LEN, L".aml");
+
+  Print (L"Dumping ACPI table to: %s (%u bytes) ... ", FileNameBuffer, Length);
 
   TransferBytes = ShellDumpBufferToFile (FileNameBuffer, Ptr, Length);
   return (Length == TransferBytes);
@@ -69,9 +103,10 @@ DumpAcpiTableToFile (
 /**
   This function processes the table reporting options for the ACPI table.
 
-  @param [in] Signature The ACPI table Signature.
-  @param [in] TablePtr  Pointer to the ACPI table data.
-  @param [in] Length    The length fo the ACPI table.
+  @param [in] Signature   The ACPI table Signature.
+  @param [in] TablePtr    Pointer to the ACPI table data.
+  @param [in] Length      The ACPI table Length.
+  @param [in] OemTableId  The ACPI table Oem Table ID.
 
   @retval Returns TRUE if the ACPI table should be traced.
 **/
@@ -79,7 +114,8 @@ BOOLEAN
 ProcessTableReportOptions (
   IN CONST UINT32  Signature,
   IN CONST UINT8   *TablePtr,
-  IN CONST UINT32  Length
+  IN CONST UINT32  Length,
+  IN CONST UINT64  OemTableId
   )
 {
   UINTN                OriginalAttribute;
@@ -121,14 +157,14 @@ ProcessTableReportOptions (
                          );
         }
 
-        Print (L"\nInstalled Table(s):\n");
+        Print (L"Installed Table(s):\n");
         if (HighLight) {
           gST->ConOut->SetAttribute (gST->ConOut, OriginalAttribute);
         }
       }
 
       Print (
-        L"\t%4d. %c%c%c%c\n",
+        L"\t%4u. %c%c%c%c\n",
         ++mTableCount,
         SignaturePtr[0],
         SignaturePtr[1],
@@ -139,7 +175,7 @@ ProcessTableReportOptions (
     case ReportDumpBinFile:
       if (Signature == SelectedTable->Type) {
         SelectedTable->Found = TRUE;
-        DumpAcpiTableToFile (TablePtr, Length);
+        DumpAcpiTableToFile (TablePtr, Length, OemTableId);
       }
 
       break;
@@ -260,7 +296,7 @@ AcpiView (
     // The RSDP length is 4 bytes starting at offset 20
     RsdpLength = *(UINT32 *)(RsdpPtr + RSDP_LENGTH_OFFSET);
 
-    Trace = ProcessTableReportOptions (RSDP_TABLE_INFO, RsdpPtr, RsdpLength);
+    Trace = ProcessTableReportOptions (RSDP_TABLE_INFO, RsdpPtr, RsdpLength, 0);
 
     Status = GetParser (RSDP_TABLE_INFO, &RsdpParserProc);
     if (EFI_ERROR (Status)) {
@@ -297,13 +333,13 @@ AcpiView (
          (ReportDumpBinFile == ReportOption)) &&
         (!SelectedTable->Found))
     {
-      Print (L"\nRequested ACPI Table not found.\n");
+      Print (L"Requested ACPI Table not found.\n");
     } else if (GetConsistencyChecking () &&
                (ReportDumpBinFile != ReportOption))
     {
       OriginalAttribute = gST->ConOut->Mode->Attribute;
 
-      Print (L"\nTable Statistics:\n");
+      Print (L"Table Statistics:\n");
 
       if (GetColourHighlighting ()) {
         PrintAttribute = (GetErrorCount () > 0) ?
@@ -315,7 +351,7 @@ AcpiView (
         gST->ConOut->SetAttribute (gST->ConOut, PrintAttribute);
       }
 
-      Print (L"\t%d Error(s)\n", GetErrorCount ());
+      Print (L"\t%u Error(s)\n", GetErrorCount ());
 
       if (GetColourHighlighting ()) {
         PrintAttribute = (GetWarningCount () > 0) ?
@@ -328,7 +364,7 @@ AcpiView (
         gST->ConOut->SetAttribute (gST->ConOut, PrintAttribute);
       }
 
-      Print (L"\t%d Warning(s)\n", GetWarningCount ());
+      Print (L"\t%u Warning(s)\n", GetWarningCount ());
 
       if (GetColourHighlighting ()) {
         gST->ConOut->SetAttribute (gST->ConOut, OriginalAttribute);
